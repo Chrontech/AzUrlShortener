@@ -133,3 +133,12 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 
 [UrlShortener]: images/UrlShortener_600.png
+
+# Troubleshooting
+The following were needed to be removed then manually added again.
+
+    <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.0" />
+
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.0" />
+    <PackageReference Include="Aspire.Hosting.Azure.Functions" Version="9.3.0-preview.1.25265.20" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="9.3.0" />
