@@ -134,11 +134,35 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 [UrlShortener]: images/UrlShortener_600.png
 
-# Troubleshooting
-The following were needed to be removed then manually added again.
+# Guide From Brayden's Work
 
-    <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.0" />
+## Issues with SDK/Nuget
 
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.0" />
-    <PackageReference Include="Aspire.Hosting.Azure.Functions" Version="9.3.0-preview.1.25265.20" />
-    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="9.3.0" />
+The following were needed to be removed then manually added again from the project files to get them to restore properly on my machine. Unsure why. Likely this is fixed when I re-comitted them.
+
+<Sdk Name="Aspire.AppHost.Sdk" Version="9.3.0" />
+<PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.0" />
+<PackageReference Include="Aspire.Hosting.Azure.Functions" Version="9.3.0-preview.1.25265.20" />
+<PackageReference Include="Aspire.Hosting.Azure.Storage" Version="9.3.0" />
+
+## Deployment 
+
+check the how-to-deploy.md doc
+
+The resource group is called: `url-prod` which generated `rg-url-prod` in the portal
+
+To deploy, run `azd up` in the /src directory.
+
+It will ask you for 3 parameters, and then save these in the .azure folder
+
+CustomDomain - domain where your function app will live (the public redirection app). This originally was discussed as short.gochronicle.com
+
+DefaultRedirectUrl - if the path of the short url doesn't exist in DB, where do you want to redirect to. Empty string will just show an error page which is likey fine.
+
+APIKey - The hardcoded API key provided. We can regenerate it, and if so you just need to redeploy with updated parameter with the new key.
+ 
+### Troubleshooting Deployment
+
+Initially `az up` threw an error about an env variable of TABLEENDPOINT. If you get this, I opened a github issue about it that talks about my rename solve.
+
+https://github.com/microsoft/AzUrlShortener/issues/578

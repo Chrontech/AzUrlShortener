@@ -11,7 +11,25 @@ public static class ShortenerEnpoints
     public static void MapShortenerEnpoints(this IEndpointRouteBuilder app)
     {
         var endpoints = app.MapGroup("api")
-                .WithOpenApi();
+                .WithOpenApi()
+                .AddEndpointFilter(async (context, next) =>
+                {
+                    var httpContext = context.HttpContext;
+                    // You can change the header name if needed
+                    if (!httpContext.Request.Headers.TryGetValue("x-api-key", out var extractedApiKey))
+                    {
+                        return Results.Unauthorized();
+                    }
+
+                    // Ideally, get the API key from configuration/environment
+                    var apiKey = Environment.GetEnvironmentVariable("APIKey");
+                    if (!string.Equals(extractedApiKey, apiKey, StringComparison.Ordinal))
+                    {
+                        return Results.Unauthorized();
+                    }
+
+                    return await next(context);
+                });
 
         // GETS
 
