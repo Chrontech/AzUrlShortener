@@ -9,16 +9,11 @@ public class ApiCrudContractTests
 {
     private const string PortalUrl = "https://portal.gochronicle.com/?site=download-chronicle%2F";
 
-    [Fact]
+    [ServerContractFact]
     public async Task Mobile_link_can_be_created_listed_updated_and_archived()
     {
-        var baseUrl = Environment.GetEnvironmentVariable("SERVER_CONTRACT_BASE_URL");
-        var apiKey = Environment.GetEnvironmentVariable("SERVER_CONTRACT_API_KEY");
-        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(apiKey))
-        {
-            return;
-        }
-
+        var baseUrl = Environment.GetEnvironmentVariable("SERVER_CONTRACT_BASE_URL")!;
+        var apiKey = Environment.GetEnvironmentVariable("SERVER_CONTRACT_API_KEY")!;
         using var client = new HttpClient { BaseAddress = new Uri(baseUrl) };
         client.DefaultRequestHeaders.Add("x-api-key", apiKey);
         var vanity = "contract" + Guid.NewGuid().ToString("N")[..12];
