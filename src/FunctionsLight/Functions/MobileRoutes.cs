@@ -155,10 +155,9 @@ public class MobileRoutes
 
     private static string CreateInterstitial(string shortId)
     {
-        var scheme = JsonSerializer.Serialize(GetSetting("ChronicleUriScheme", DefaultUriScheme));
+        var launchUri = JsonSerializer.Serialize($"{GetSetting("ChronicleUriScheme", DefaultUriScheme)}://?shortid={Uri.EscapeDataString(shortId)}");
         var portalUrl = JsonSerializer.Serialize(GetSetting("ChroniclePortalUrl", DefaultPortalUrl));
-        var encodedShortId = JsonSerializer.Serialize(Uri.EscapeDataString(shortId));
-        return $$"""<!doctype html><html><head><meta charset="utf-8"><title>Opening Chronicle</title></head><body><p>Opening Chronicle…</p><script>(() => { let launched = false; const markLaunched = () => { launched = true; }; document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') markLaunched(); }); window.addEventListener('pagehide', markLaunched); window.addEventListener('beforeunload', markLaunched); window.location.href = {{scheme}} + '://?shortid=' + {{encodedShortId}}; window.setTimeout(() => { if (!launched) window.location.replace({{portalUrl}}); }, 1500); })();</script></body></html>""";
+        return $$"""<!doctype html><html><head><meta charset="utf-8"><title>Opening Chronicle</title></head><body><p>Opening Chronicle…</p><script>(() => { let launched = false; const markLaunched = () => { launched = true; }; document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') markLaunched(); }); window.addEventListener('pagehide', markLaunched); window.addEventListener('beforeunload', markLaunched); window.location.href = {{launchUri}}; window.setTimeout(() => { if (!launched) window.location.replace({{portalUrl}}); }, 1500); })();</script></body></html>""";
     }
 
     private static string[] GetFingerprints()
