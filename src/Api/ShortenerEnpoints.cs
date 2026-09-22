@@ -5,6 +5,7 @@ using Cloud5mins.ShortenerTools.Core.Service;
 using Cloud5mins.ShortenerTools.Core.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Net;
+using System.Text.Json;
 
 public static class ShortenerEnpoints
 {
@@ -135,24 +136,48 @@ public static class ShortenerEnpoints
 
     static private async Task<Results<
                                     Ok<ShortUrlEntity>,
+                                    BadRequest<DetailedBadRequest>,
                                     InternalServerError<DetailedBadRequest>>>
-                                    UrlUpdate(ShortUrlEntity shortUrl,
+                                    UrlUpdate(JsonDocument requestBody,
                                                 TableServiceClient tblClient,
                                                 HttpContext context,
                                                 ILogger logger)
     {
         try
         {
+            var shortUrl = requestBody.Deserialize<ShortUrlEntity>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            if (shortUrl == null)
+            {
+                return TypedResults.BadRequest(new DetailedBadRequest { Message = "The request body is required." });
+            }
+
             var urlServices = new UrlServices(logger, new AzStrorageTablesService(tblClient));
             var host = GetHost(context);
-            var result = await urlServices.Update(shortUrl, host);
+            var result = await urlServices.Update(shortUrl, host, new MobileUpdateFields(
+                HasProperty(requestBody.RootElement, "title"),
+                HasProperty(requestBody.RootElement, "data"),
+                HasProperty(requestBody.RootElement, "url"),
+                HasProperty(requestBody.RootElement, "schedules") || HasProperty(requestBody.RootElement, "schedulesPropertyRaw"),
+                HasProperty(requestBody.RootElement, "linkType")));
             return TypedResults.Ok(result);
+        }
+        catch (ShortenerToolException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
         }
         catch (Exception ex)
         {
             logger.LogError(ex.Message);
             return TypedResults.InternalServerError<DetailedBadRequest>(new DetailedBadRequest { Message = ex.Message });
         }
+    }
+
+    private static bool HasProperty(JsonElement body, string name)
+    {
+        return body.EnumerateObject().Any(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
 
@@ -250,4 +275,3 @@ public static class ShortenerEnpoints
 	}
 
 }
-

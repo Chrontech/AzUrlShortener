@@ -11,6 +11,7 @@ using CsvHelper.Configuration;
 namespace Cloud5mins.ShortenerTools;
 public static class Utility
 {
+    private static readonly string[] ReservedVanities = ["m", "resolve", ".well-known"];
     //reshuffled for randomisation, same unique characters just jumbled up, you can replace with your own version
     private const string ConversionCode = "FjTG0s5dgWkbLf_8etOZqMzNhmp7u6lUJoXIDiQB9-wRxCKyrPcv4En3Y21aASHV";
     private static readonly int Base = ConversionCode.Length;
@@ -45,6 +46,11 @@ public static class Utility
     public static string GetShortUrl(string host, string vanity)
     {
         return host + "/" + vanity;
+    }
+
+    public static bool IsReservedVanity(string vanity)
+    {
+        return ReservedVanities.Contains(vanity, StringComparer.OrdinalIgnoreCase);
     }
 
     // generates a unique, random, and alphanumeric token for the use as a url 
