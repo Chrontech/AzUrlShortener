@@ -7,7 +7,10 @@ namespace Cloud5mins.ShortenerTools.ServerContractTests;
 
 public class PublicMobileContractTests
 {
-    private const string PortalUrl = "https://portal.gochronicle.com/?site=download-chronicle%2F";
+    private static string PortalUrl => Environment.GetEnvironmentVariable("SERVER_CONTRACT_PORTAL_URL") ?? "https://portal.gochronicle.com/?site=download-chronicle%2F";
+    private static string UriScheme => Environment.GetEnvironmentVariable("SERVER_CONTRACT_URI_SCHEME") ?? "ChronicleMobile";
+    private static string IosAppId => Environment.GetEnvironmentVariable("SERVER_CONTRACT_IOS_APP_ID") ?? "MQZQS24FH9.com.gochronicle.chroniclemobile";
+    private static string AndroidPackage => Environment.GetEnvironmentVariable("SERVER_CONTRACT_ANDROID_PACKAGE") ?? "com.gochronicle.chroniclemobileapp";
 
     [ServerContractFact]
     public async Task Mobile_routes_resolve_metadata_and_fall_back_without_forwarding_it()
@@ -44,7 +47,7 @@ public class PublicMobileContractTests
         Assert.StartsWith("text/html", mobile.Content.Headers.ContentType?.MediaType);
         var html = await mobile.Content.ReadAsStringAsync();
         Assert.Contains("Opening Chronicle", html);
-        Assert.Contains($"ChronicleMobile://?shortid={Uri.EscapeDataString(vanity)}", html);
+        Assert.Contains($"{UriScheme}://?shortid={Uri.EscapeDataString(vanity)}", html);
         Assert.Contains(PortalUrl, html);
         Assert.DoesNotContain("screen", html);
 
@@ -121,12 +124,24 @@ public class PublicMobileContractTests
         Assert.StartsWith("application/json", apple.Content.Headers.ContentType?.MediaType);
         var appleDocument = JsonDocument.Parse(await apple.Content.ReadAsStreamAsync()).RootElement;
         var appleDetail = appleDocument.GetProperty("applinks").GetProperty("details")[0];
-        Assert.Equal("MQZQS24FH9.com.gochronicle.chroniclemobile", appleDetail.GetProperty("appID").GetString());
+        Assert.Equal(IosAppId, appleDetail.GetProperty("appID").GetString());
         Assert.Equal("/m/*", appleDetail.GetProperty("components")[0].GetProperty("/").GetString());
 
         var android = await client.GetAsync("/.well-known/assetlinks.json");
         Assert.Equal(HttpStatusCode.OK, android.StatusCode);
         Assert.StartsWith("application/json", android.Content.Headers.ContentType?.MediaType);
-        JsonDocument.Parse(await android.Content.ReadAsStreamAsync());
+        var androidDocument = JsonDocument.Parse(await android.Content.ReadAsStreamAsync()).RootElement;
+        var expectedFingerprints = (Environment.GetEnvironmentVariable("SERVER_CONTRACT_ANDROID_SIGNING_FINGERPRINTS") ?? string.Empty)
+            .Split([',', ';', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (expectedFingerprints.Length == 0)
+        {
+            Assert.Empty(androidDocument.EnumerateArray());
+        }
+        else
+        {
+            var target = androidDocument[0].GetProperty("target");
+            Assert.Equal(AndroidPackage, target.GetProperty("package_name").GetString());
+            Assert.Equal(expectedFingerprints, target.GetProperty("sha256_cert_fingerprints").EnumerateArray().Select(value => value.GetString()));
+        }
     }
 }

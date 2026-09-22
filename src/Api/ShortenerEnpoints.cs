@@ -81,16 +81,21 @@ public static class ShortenerEnpoints
                                 NotFound<DetailedBadRequest>,
                                 Conflict<DetailedBadRequest>,
                                 InternalServerError<DetailedBadRequest>
-                                >> UrlCreate(ShortRequest request,
-                                                TableServiceClient tblClient,
+                                >> UrlCreate(JsonDocument requestBody,
+                                                 TableServiceClient tblClient,
                                                 HttpContext context,
                                                 ILogger logger)
     {
         try
         {
+            if (!TryDeserializeRequest(requestBody, out ShortRequest? request, out var error))
+            {
+                return TypedResults.BadRequest(new DetailedBadRequest { Message = error });
+            }
+
             var urlServices = new UrlServices(logger, new AzStrorageTablesService(tblClient));
             var host = GetHost(context);
-            ShortResponse result = await urlServices.Create(request, host);
+            ShortResponse result = await urlServices.Create(request!, host);
             return TypedResults.Created($"/api/UrlCreate/{result.ShortUrl}", result);
         }
         catch (ShortenerToolException ex)
@@ -106,6 +111,10 @@ public static class ShortenerEnpoints
                 default:
                     return TypedResults.InternalServerError<DetailedBadRequest>(new DetailedBadRequest { Message = ex.Message });
             }
+        }
+        catch (JsonException ex)
+        {
+            return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -145,10 +154,12 @@ public static class ShortenerEnpoints
     {
         try
         {
-            var shortUrl = requestBody.Deserialize<ShortUrlEntity>(new JsonSerializerOptions
+            if (!IsValidData(requestBody.RootElement, out var error))
             {
-                PropertyNameCaseInsensitive = true
-            });
+                return TypedResults.BadRequest(new DetailedBadRequest { Message = error });
+            }
+
+            var shortUrl = requestBody.Deserialize<ShortUrlEntity>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (shortUrl == null)
             {
                 return TypedResults.BadRequest(new DetailedBadRequest { Message = "The request body is required." });
@@ -168,6 +179,10 @@ public static class ShortenerEnpoints
         {
             return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
         }
+        catch (JsonException ex)
+        {
+            return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex.Message);
@@ -178,6 +193,58 @@ public static class ShortenerEnpoints
     private static bool HasProperty(JsonElement body, string name)
     {
         return body.EnumerateObject().Any(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool TryDeserializeRequest(JsonDocument requestBody, out ShortRequest? request, out string error)
+    {
+        request = null;
+        if (!IsValidData(requestBody.RootElement, out error))
+        {
+            return false;
+        }
+
+        try
+        {
+            request = requestBody.Deserialize<ShortRequest>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (request == null)
+            {
+                error = "The request body is required.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+        catch (JsonException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool IsValidData(JsonElement body, out string error)
+    {
+        if (body.ValueKind != JsonValueKind.Object)
+        {
+            error = "The request body must be a JSON object.";
+            return false;
+        }
+
+        var data = body.EnumerateObject().FirstOrDefault(property => string.Equals(property.Name, "data", StringComparison.OrdinalIgnoreCase));
+        if (data.Equals(default(JsonProperty)))
+        {
+            error = string.Empty;
+            return true;
+        }
+
+        if (data.Value.ValueKind != JsonValueKind.Object || data.Value.EnumerateObject().Any(property => property.Value.ValueKind != JsonValueKind.String))
+        {
+            error = "The data parameter must be an object with string values.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
     }
 
 
