@@ -23,6 +23,9 @@ public sealed class DeepLinkAndResolverTests
     [InlineData("ChronicleMobile:///?shortid=id")]
     [InlineData("ChronicleMobile://?shortid=")]
     [InlineData("ChronicleMobile://?shortid=id&shortid=other")]
+    [InlineData("ChronicleMobile://?shortid=id&extra=x")]
+    [InlineData("ChronicleMobile://?extra=x&shortid=id")]
+    [InlineData("ChronicleMobile://?shortid=id#fragment")]
     [InlineData("ChronicleMobile://?shortid=%ZZ")]
     public void TryParse_RejectsInvalidUris(string? uri)
     {
@@ -48,6 +51,24 @@ public sealed class DeepLinkAndResolverTests
         var client = new ResolverClient(new HttpClient(handler));
 
         var result = await client.ResolveAsync("ChronicleMobile://?other=id");
+
+        Assert.Equal(ResolutionStatus.InvalidUri, result.Status);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Theory]
+    [InlineData("ChronicleMobile://?shortid=id&extra=x")]
+    [InlineData("ChronicleMobile://?shortid=id&shortid=other")]
+    [InlineData("ChronicleMobile://?extra=x&shortid=id")]
+    [InlineData("ChronicleMobile://?shortid=id#fragment")]
+    [InlineData("ChronicleMobile://host?shortid=id")]
+    [InlineData("ChronicleMobile:///?shortid=id")]
+    public async Task ResolveAsync_InvalidShape_ReturnsVisibleStateWithoutRequest(string uri)
+    {
+        var handler = new RecordingHandler();
+        var client = new ResolverClient(new HttpClient(handler));
+
+        var result = await client.ResolveAsync(uri);
 
         Assert.Equal(ResolutionStatus.InvalidUri, result.Status);
         Assert.Equal(0, handler.RequestCount);

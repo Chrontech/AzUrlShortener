@@ -164,6 +164,8 @@ It will request application parameters and save them in the `.azure` environment
 - `ChronicleIosAppId` - iOS application identifier published by the association endpoint.
 - `ChronicleAndroidPackage` - Android package published by the association endpoint.
 - `ChronicleAndroidSigningFingerprints` - comma- or semicolon-separated Play App Signing SHA-256 fingerprints. Use production Play App Signing fingerprints only; do not use debug, upload-key, or placeholder values.
+
+The Android/iOS custom-scheme sample is under [`src/MobileSample`](src/MobileSample). It resolves mobile metadata for display only and does not implement Universal Links, App Links, deferred deep linking, or metadata-driven navigation.
  
 ### Troubleshooting Deployment
 

@@ -16,25 +16,16 @@ public static class DeepLinkParser
             return false;
         }
 
-        string? encodedShortId = null;
         var rawQuery = rawUri["ChronicleMobile://?".Length..];
-        foreach (var pair in rawQuery.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        var separator = rawQuery.IndexOf('=');
+        if (rawQuery.Contains('&')
+            || separator < 0
+            || !string.Equals(rawQuery[..separator], "shortid", StringComparison.Ordinal))
         {
-            var separator = pair.IndexOf('=');
-            var name = separator < 0 ? pair : pair[..separator];
-            if (!string.Equals(name, "shortid", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (encodedShortId is not null || separator < 0)
-            {
-                return false;
-            }
-
-            encodedShortId = pair[(separator + 1)..];
+            return false;
         }
 
+        var encodedShortId = rawQuery[(separator + 1)..];
         if (string.IsNullOrEmpty(encodedShortId) || !HasValidEscapes(encodedShortId))
         {
             return false;
