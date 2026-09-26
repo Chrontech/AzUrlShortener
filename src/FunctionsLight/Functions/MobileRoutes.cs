@@ -143,7 +143,7 @@ public class MobileRoutes
     {
         response.Headers.Add("Cache-Control", "no-store, no-cache");
         response.Headers.Add("Pragma", "no-cache");
-        response.Headers.Add("Expires", "0");
+        response.Headers.Add("Expires", "Thu, 01 Jan 1970 00:00:00 GMT");
     }
 
     private static HttpResponseData RedirectToPortal(HttpRequestData request)
