@@ -90,8 +90,8 @@ public sealed class DeepLinkAndResolverTests
     }
 
     [Theory]
-    [InlineData("http://10.0.2.2:7071/", "http://10.0.2.2:7071/resolve/a%2Fb")]
-    [InlineData("http://10.0.2.2:7071", "http://10.0.2.2:7071/resolve/a%2Fb")]
+    [InlineData("http://127.0.0.1:7071/", "http://127.0.0.1:7071/resolve/a%2Fb")]
+    [InlineData("http://127.0.0.1:7071", "http://127.0.0.1:7071/resolve/a%2Fb")]
     public async Task ResolveAsync_InjectedBase_ComposesEncodedResolverUrl(string resolverBase, string expectedUrl)
     {
         var handler = new RecordingHandler();

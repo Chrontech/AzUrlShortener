@@ -276,3 +276,6 @@ _ignore/
 
 # Local deepwork progress
 .slim/deepwork/
+
+# Local Android emulator state
+.local-android-e2e/

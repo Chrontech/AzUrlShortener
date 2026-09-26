@@ -10,8 +10,8 @@ public static class MauiProgram
         builder.UseMauiApp<App>();
         builder.Services.AddSingleton(new HttpClient());
 #if ANDROID && DEBUG
-        // Production must use https://short.gochronicle.com/.
-        var resolverBaseUri = new Uri("http://10.0.2.2:7071/");
+        // Local testing requires adb reverse tcp:7071 tcp:7071; production uses https://short.gochronicle.com/.
+        var resolverBaseUri = new Uri("http://127.0.0.1:7071/");
 #else
         var resolverBaseUri = new Uri("https://short.gochronicle.com/");
 #endif

@@ -246,7 +246,7 @@ public sealed class MainPage : ContentPage
         };
 
         // 9. Root Layout and ScrollView
-        Content = new ScrollView
+        Content = new Microsoft.Maui.Controls.ScrollView
         {
             Content = new VerticalStackLayout
             {
