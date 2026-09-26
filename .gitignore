@@ -273,3 +273,6 @@ src/adminTools/adminBlazorWebsite/src/appsettings.Development.json
 **/.vscode/settings.json
 
 _ignore/
+
+# Local deepwork progress
+.slim/deepwork/

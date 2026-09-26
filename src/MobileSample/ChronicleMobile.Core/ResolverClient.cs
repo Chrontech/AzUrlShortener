@@ -3,9 +3,24 @@ using System.Text.Json;
 
 namespace ChronicleMobile.Core;
 
-public sealed class ResolverClient(HttpClient httpClient)
+public sealed class ResolverClient
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
+    private static readonly Uri ProductionResolverBaseUri = new("https://short.gochronicle.com/");
+    private readonly HttpClient httpClient;
+    private readonly Uri resolverBaseUri;
+
+    public ResolverClient(HttpClient httpClient, Uri? resolverBaseUri = null)
+    {
+        if (resolverBaseUri is { IsAbsoluteUri: false })
+        {
+            throw new ArgumentException("The resolver base URI must be absolute.", nameof(resolverBaseUri));
+        }
+
+        this.httpClient = httpClient;
+        var baseUri = resolverBaseUri ?? ProductionResolverBaseUri;
+        this.resolverBaseUri = new Uri(baseUri.AbsoluteUri.TrimEnd('/') + "/");
+    }
 
     public async Task<ResolutionResult> ResolveAsync(string? rawUri, CancellationToken cancellationToken = default)
     {
@@ -21,7 +36,7 @@ public sealed class ResolverClient(HttpClient httpClient)
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"https://short.gochronicle.com/resolve/{Uri.EscapeDataString(shortId)}");
+                new Uri(resolverBaseUri, $"resolve/{Uri.EscapeDataString(shortId)}"));
             request.Headers.Authorization = null;
             using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
 

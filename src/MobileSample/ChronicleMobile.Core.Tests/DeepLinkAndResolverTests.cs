@@ -90,6 +90,19 @@ public sealed class DeepLinkAndResolverTests
     }
 
     [Theory]
+    [InlineData("http://10.0.2.2:7071/", "http://10.0.2.2:7071/resolve/a%2Fb")]
+    [InlineData("http://10.0.2.2:7071", "http://10.0.2.2:7071/resolve/a%2Fb")]
+    public async Task ResolveAsync_InjectedBase_ComposesEncodedResolverUrl(string resolverBase, string expectedUrl)
+    {
+        var handler = new RecordingHandler();
+        var client = new ResolverClient(new HttpClient(handler), new Uri(resolverBase));
+
+        await client.ResolveAsync("ChronicleMobile://?shortid=a%2Fb");
+
+        Assert.Equal(expectedUrl, handler.RequestUri!.AbsoluteUri);
+    }
+
+    [Theory]
     [InlineData(HttpStatusCode.NotFound, ResolutionStatus.Missing)]
     [InlineData(HttpStatusCode.Gone, ResolutionStatus.Archived)]
     [InlineData(HttpStatusCode.BadGateway, ResolutionStatus.Error)]
