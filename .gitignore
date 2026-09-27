@@ -274,8 +274,5 @@ src/adminTools/adminBlazorWebsite/src/appsettings.Development.json
 
 _ignore/
 
-# Local deepwork progress
-.slim/deepwork/
-
 # Local Android emulator state
 .local-android-e2e/
