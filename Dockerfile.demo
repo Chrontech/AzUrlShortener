@@ -1,0 +1,30 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0.318 AS source
+WORKDIR /src
+COPY src/Api/ src/Api/
+COPY src/FunctionsLight/ src/FunctionsLight/
+COPY src/Core/ src/Core/
+COPY src/ServiceDefaults/ src/ServiceDefaults/
+
+FROM source AS api-publish
+RUN dotnet publish src/Api/Cloud5mins.ShortenerTools.Api.csproj \
+    --configuration Release \
+    --output /out \
+    /p:UseAppHost=false
+
+FROM source AS functions-publish
+RUN dotnet publish src/FunctionsLight/Cloud5mins.ShortenerTools.FunctionsLight.csproj \
+    --configuration Release \
+    --output /out \
+    /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS api
+WORKDIR /app
+COPY --from=api-publish /out/ ./
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENTRYPOINT ["dotnet", "Cloud5mins.ShortenerTools.Api.dll"]
+
+FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated9.0 AS functions
+COPY --from=functions-publish /out/ /home/site/wwwroot/
+ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
+    FUNCTIONS_WORKER_RUNTIME=dotnet-isolated \
+    AzureFunctionsJobHost__Logging__Console__IsEnabled=true

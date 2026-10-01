@@ -1,0 +1,38 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.demo
+      target: api
+    environment:
+      APIKey: '${APIKey:?Run through the demo helper}'
+      ConnectionStrings__strTables: 'UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://azurite'
+    ports:
+      - '127.0.0.1:5288:8080'
+    depends_on:
+      - azurite
+
+  functions:
+    build:
+      context: .
+      dockerfile: Dockerfile.demo
+      target: functions
+    environment:
+      AzureWebJobsStorage: 'UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://azurite'
+      ConnectionStrings__strTables: 'UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://azurite'
+    ports:
+      - '127.0.0.1:17071:80'
+    depends_on:
+      - azurite
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
+    command:
+      - azurite
+      - --blobHost
+      - 0.0.0.0
+      - --queueHost
+      - 0.0.0.0
+      - --tableHost
+      - 0.0.0.0
+      - --disableProductStyleUrl
