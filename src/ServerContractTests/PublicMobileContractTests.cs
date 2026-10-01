@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace Cloud5mins.ShortenerTools.ServerContractTests;
@@ -47,8 +48,12 @@ public class PublicMobileContractTests
         Assert.StartsWith("text/html", mobile.Content.Headers.ContentType?.MediaType);
         var html = await mobile.Content.ReadAsStringAsync();
         Assert.Contains("Opening Chronicle", html);
-        Assert.Contains($"{UriScheme}://?shortid={Uri.EscapeDataString(vanity)}", html);
-        Assert.Contains(PortalUrl, html);
+        var launchUrl = $"{UriScheme}://?shortid={Uri.EscapeDataString(vanity)}";
+        var escapedLaunchUrl = WebUtility.HtmlEncode(launchUrl);
+        var escapedPortalUrl = WebUtility.HtmlEncode(PortalUrl);
+        Assert.Contains(launchUrl, html);
+        Assert.Matches($"<a\\b(?=[^>]*\\bid=\"open-chronicle\")(?=[^>]*\\bhref=\"{Regex.Escape(escapedLaunchUrl)}\")[^>]*>[\\s\\S]*?Open Chronicle[\\s\\S]*?</a>", html);
+        Assert.Matches($"<a\\b(?=[^>]*\\bid=\"download-chronicle\")(?=[^>]*\\bhref=\"{Regex.Escape(escapedPortalUrl)}\")[^>]*>[\\s\\S]*?Download Chronicle[\\s\\S]*?</a>", html);
         Assert.DoesNotContain("screen", html);
 
         var missingResolve = await publicClient.GetAsync($"/resolve/missing{Guid.NewGuid():N}");

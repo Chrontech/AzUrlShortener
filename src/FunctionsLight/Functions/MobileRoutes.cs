@@ -143,7 +143,7 @@ public class MobileRoutes
     {
         response.Headers.Add("Cache-Control", "no-store, no-cache");
         response.Headers.Add("Pragma", "no-cache");
-        response.Headers.Add("Expires", "0");
+        response.Headers.Add("Expires", "Thu, 01 Jan 1970 00:00:00 GMT");
     }
 
     private static HttpResponseData RedirectToPortal(HttpRequestData request)
@@ -155,9 +155,179 @@ public class MobileRoutes
 
     private static string CreateInterstitial(string shortId)
     {
-        var launchUri = JsonSerializer.Serialize($"{GetSetting("ChronicleUriScheme", DefaultUriScheme)}://?shortid={Uri.EscapeDataString(shortId)}");
-        var portalUrl = JsonSerializer.Serialize(GetSetting("ChroniclePortalUrl", DefaultPortalUrl));
-        return $$"""<!doctype html><html><head><meta charset="utf-8"><title>Opening Chronicle</title></head><body><p>Opening Chronicle…</p><script>(() => { let launched = false; const markLaunched = () => { launched = true; }; document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') markLaunched(); }); window.addEventListener('pagehide', markLaunched); window.addEventListener('beforeunload', markLaunched); window.location.href = {{launchUri}}; window.setTimeout(() => { if (!launched) window.location.replace({{portalUrl}}); }, 1500); })();</script></body></html>""";
+        var rawLaunchUri = $"{GetSetting("ChronicleUriScheme", DefaultUriScheme)}://?shortid={Uri.EscapeDataString(shortId)}";
+        var rawPortalUrl = GetSetting("ChroniclePortalUrl", DefaultPortalUrl);
+
+        var launchUriJs = JsonSerializer.Serialize(rawLaunchUri);
+        var portalUrlJs = JsonSerializer.Serialize(rawPortalUrl);
+
+        var launchUriHtml = WebUtility.HtmlEncode(rawLaunchUri);
+        var portalUrlHtml = WebUtility.HtmlEncode(rawPortalUrl);
+
+        return $$"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opening Chronicle</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      padding: 2.5rem 2rem;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e2e8f0;
+      border-radius: 50%;
+      border-top-color: #4f46e5;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 1.375rem;
+      font-weight: 700;
+      margin: 0 0 0.75rem 0;
+      letter-spacing: -0.025em;
+    }
+    p {
+      font-size: 0.95rem;
+      color: #475569;
+      line-height: 1.5;
+      margin: 0 0 2rem 0;
+    }
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background-color 0.15s ease-in-out;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4f46e5;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background-color: #4338ca;
+    }
+    .btn-primary:active {
+      background-color: #3730a3;
+    }
+    .btn-secondary {
+      background-color: #f1f5f9;
+      color: #334155;
+    }
+    .btn-secondary:hover {
+      background-color: #e2e8f0;
+    }
+    .btn-secondary:active {
+      background-color: #cbd5e1;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spinner {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Opening Chronicle…</h1>
+    <p>Your browser may block automatic opening. Use Open Chronicle to try again, or download the app.</p>
+    <div class="button-group">
+      <a id="open-chronicle" class="btn btn-primary" href="{{launchUriHtml}}">Open Chronicle</a>
+      <a id="download-chronicle" class="btn btn-secondary" href="{{portalUrlHtml}}">Download Chronicle</a>
+    </div>
+  </div>
+  <script>
+    (() => {
+      const launchUri = {{launchUriJs}};
+      const portalUrl = {{portalUrlJs}};
+
+      let fallbackTimer = null;
+
+      function clearFallback() {
+        if (fallbackTimer !== null) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
+      }
+
+      function armFallback() {
+        clearFallback();
+        fallbackTimer = setTimeout(() => {
+          if (document.visibilityState === 'visible') {
+            window.location.replace(portalUrl);
+          }
+        }, 1500);
+      }
+
+      // Clear the fallback if the tab becomes hidden or the page is unloaded.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          clearFallback();
+        }
+      });
+      window.addEventListener('pagehide', clearFallback);
+
+      // Allow manual re-triggering of the deep link to reset the fallback timer.
+      document.getElementById('open-chronicle').addEventListener('click', () => {
+        armFallback();
+      });
+
+      // Cancel fallback if downloading is explicitly requested.
+      document.getElementById('download-chronicle').addEventListener('click', () => {
+        clearFallback();
+      });
+
+      // Set fallback and attempt the initial automatic redirection.
+      armFallback();
+      try {
+        window.location.href = launchUri;
+      } catch (e) {
+        // Ignore early failures to allow fallback timer to run.
+      }
+    })();
+  </script>
+</body>
+</html>
+""";
     }
 
     private static string[] GetFingerprints()
