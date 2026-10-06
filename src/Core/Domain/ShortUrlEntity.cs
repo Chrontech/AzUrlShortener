@@ -45,26 +45,15 @@ namespace Cloud5mins.ShortenerTools.Core.Domain
         [JsonIgnore]
         public string? DataPropertyRaw { get; set; }
 
-        private Dictionary<string, string>? _data;
-
         [IgnoreDataMember]
         public Dictionary<string, string> Data
         {
-            get
-            {
-                if (_data == null)
-                {
-                    _data = string.IsNullOrEmpty(DataPropertyRaw)
-                        ? new Dictionary<string, string>()
-                        : JsonSerializer.Deserialize<Dictionary<string, string>>(DataPropertyRaw) ?? new Dictionary<string, string>();
-                }
-
-                return _data;
-            }
+            get => string.IsNullOrEmpty(DataPropertyRaw)
+                ? new Dictionary<string, string>()
+                : JsonSerializer.Deserialize<Dictionary<string, string>>(DataPropertyRaw) ?? new Dictionary<string, string>();
             set
             {
-                _data = value ?? new Dictionary<string, string>();
-                DataPropertyRaw = JsonSerializer.Serialize(_data);
+                DataPropertyRaw = JsonSerializer.Serialize(value ?? new Dictionary<string, string>());
             }
         }
 
