@@ -273,3 +273,5 @@ src/adminTools/adminBlazorWebsite/src/appsettings.Development.json
 **/.vscode/settings.json
 
 _ignore/
+
+.local-android-e2e/
