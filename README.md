@@ -159,7 +159,7 @@ It will request application parameters and save them in the `.azure` environment
 - `CustomDomain` - domain where the public redirection app will live, such as `short.gochronicle.com`.
 - `DefaultRedirectUrl` - fallback when an ordinary short URL does not exist.
 - `APIKey` - key required by the protected management API.
-- Mobile-link settings are code-defined in [`MobileLinkSettings.cs`](src/Core/Domain/MobileLinkSettings.cs), not deployment parameters. The Android signing fingerprint list is intentionally empty (so `assetlinks.json` returns `[]`) until actual release/Play App Signing SHA-256 fingerprints are added there. The confirmed iOS association app ID is `MQZQS24FH9.com.gochronicle.chroniclemobile`; it is separate from the mobile sample's `com.gochronicle.chroniclemobileapp` bundle ID.
+- Mobile-link association settings are code-defined in [`MobileLinkSettings.cs`](src/Core/Domain/MobileLinkSettings.cs), not deployment parameters. The Android signing fingerprint is `20:65:EC:AC:40:82:27:29:45:9B:BE:67:43:8F:B4:83:5D:35:3F:83:E5:55:CB:36:8D:A6:48:ED:76:90:39:8C`; it must match the certificate that signs the installed Android build. The confirmed production iOS association app ID is `MQZQS24FH9.com.gochronicle.chroniclemobile`; it differs from the separate [`mobile-sample` branch](https://github.com/Chrontech/AzUrlShortener/tree/mobile-sample/src/MobileSample)'s `com.gochronicle.chroniclemobileapp` bundle ID. See the [deep-link integration guide](doc/deeplink-integration.md) for association and sample-app details.
  
 ### Troubleshooting Deployment
 
