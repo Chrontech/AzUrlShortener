@@ -76,7 +76,7 @@ public class UrlServices
 			foreach (ShortUrlEntity url in result.UrlList)
 			{
 				url.ShortUrl = string.Equals(url.LinkType, LinkTypes.Mobile, StringComparison.OrdinalIgnoreCase)
-					? string.Concat(host, "/m/", url.RowKey)
+					? GetMobileShortUrl(host, url.RowKey)
 					: Utility.GetShortUrl(host, url.RowKey);
 			}
 		}
@@ -158,7 +158,7 @@ public class UrlServices
 			result.Data = newRow.Data;
 			if (isMobile)
 			{
-				result.ShortUrl = string.Concat(host, "/m/", newRow.RowKey);
+				result.ShortUrl = GetMobileShortUrl(host, newRow.RowKey);
 			}
 
 			_logger.LogInformation("Short Url created.");
@@ -207,7 +207,7 @@ public class UrlServices
 				}
 
 				result = await _stgHelper.SaveShortUrlEntity(original);
-				result.ShortUrl = string.Concat(host, "/m/", result.RowKey);
+				result.ShortUrl = GetMobileShortUrl(host, result.RowKey);
 				return result;
 			}
 
@@ -234,6 +234,11 @@ public class UrlServices
 		}
 
 		return result;
+	}
+
+	private static string GetMobileShortUrl(string host, string rowKey)
+	{
+		return string.Concat(host, "/m/", Uri.EscapeDataString(rowKey));
 	}
 
 	public async Task<ClickDateList> ClickStatsByDay(UrlClickStatsRequest input, string host)

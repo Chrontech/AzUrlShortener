@@ -230,14 +230,32 @@ public static class ShortenerEnpoints
             return false;
         }
 
-        var data = body.EnumerateObject().FirstOrDefault(property => string.Equals(property.Name, "data", StringComparison.OrdinalIgnoreCase));
-        if (data.Equals(default(JsonProperty)))
+        JsonElement data = default;
+        var dataFound = false;
+        foreach (var property in body.EnumerateObject())
+        {
+            if (!string.Equals(property.Name, "data", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (dataFound)
+            {
+                error = "The data parameter must not be specified more than once.";
+                return false;
+            }
+
+            data = property.Value;
+            dataFound = true;
+        }
+
+        if (!dataFound)
         {
             error = string.Empty;
             return true;
         }
 
-        if (data.Value.ValueKind != JsonValueKind.Object || data.Value.EnumerateObject().Any(property => property.Value.ValueKind != JsonValueKind.String))
+        if (data.ValueKind != JsonValueKind.Object || data.EnumerateObject().Any(property => property.Value.ValueKind != JsonValueKind.String))
         {
             error = "The data parameter must be an object with string values.";
             return false;

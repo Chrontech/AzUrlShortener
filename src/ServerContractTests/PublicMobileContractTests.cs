@@ -15,7 +15,7 @@ public class PublicMobileContractTests
         var apiBaseUrl = Environment.GetEnvironmentVariable("SERVER_CONTRACT_BASE_URL")!;
         var publicBaseUrl = Environment.GetEnvironmentVariable("SERVER_CONTRACT_PUBLIC_BASE_URL") ?? apiBaseUrl;
         var apiKey = Environment.GetEnvironmentVariable("SERVER_CONTRACT_API_KEY")!;
-        var vanity = "public" + Guid.NewGuid().ToString("N")[..12];
+        var vanity = "public" + Guid.NewGuid().ToString("N")[..10] + "%41";
 
         using var api = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
         api.DefaultRequestHeaders.Add("x-api-key", apiKey);
@@ -26,20 +26,25 @@ public class PublicMobileContractTests
             data = new Dictionary<string, string> { ["screen"] = "home" }
         });
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var created = JsonDocument.Parse(await create.Content.ReadAsStringAsync()).RootElement;
+        var advertisedUrl = created.GetProperty("shortUrl").GetString()!;
+        Assert.EndsWith($"/m/{Uri.EscapeDataString(vanity)}", advertisedUrl);
+        var advertisedPath = advertisedUrl[advertisedUrl.IndexOf("/m/", StringComparison.Ordinal)..];
 
         using var publicClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
         {
             BaseAddress = new Uri(publicBaseUrl)
         };
 
-        var resolve = await publicClient.GetAsync($"/resolve/{vanity}");
+        var encodedVanity = Uri.EscapeDataString(vanity);
+        var resolve = await publicClient.GetAsync($"/resolve/{encodedVanity}");
         Assert.Equal(HttpStatusCode.OK, resolve.StatusCode);
         Assert.StartsWith("application/json", resolve.Content.Headers.ContentType?.MediaType);
         Assert.Contains("no-store", resolve.Headers.CacheControl?.ToString());
         var metadata = JsonDocument.Parse(await resolve.Content.ReadAsStreamAsync()).RootElement;
         Assert.Equal("home", metadata.GetProperty("screen").GetString());
 
-        var mobile = await publicClient.GetAsync($"/m/{vanity}");
+        var mobile = await publicClient.GetAsync(advertisedPath);
         Assert.Equal(HttpStatusCode.OK, mobile.StatusCode);
         Assert.StartsWith("text/html", mobile.Content.Headers.ContentType?.MediaType);
         var html = await mobile.Content.ReadAsStringAsync();
@@ -67,11 +72,11 @@ public class PublicMobileContractTests
         });
         Assert.Equal(HttpStatusCode.OK, archive.StatusCode);
 
-        var archivedResolve = await publicClient.GetAsync($"/resolve/{vanity}");
+        var archivedResolve = await publicClient.GetAsync($"/resolve/{encodedVanity}");
         Assert.Equal(HttpStatusCode.Gone, archivedResolve.StatusCode);
         Assert.Contains("no-store", archivedResolve.Headers.CacheControl?.ToString());
 
-        var archivedMobile = await publicClient.GetAsync($"/m/{vanity}");
+        var archivedMobile = await publicClient.GetAsync(advertisedPath);
         Assert.Equal(HttpStatusCode.Redirect, archivedMobile.StatusCode);
         Assert.Equal(MobileLinkSettings.PortalUrl, archivedMobile.Headers.Location?.ToString());
 
