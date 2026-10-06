@@ -2,6 +2,7 @@ using Azure;
 using Azure.Data.Tables;
 using System.Runtime.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure;
 using Azure.Data.Tables;
 
@@ -32,6 +33,29 @@ namespace Cloud5mins.ShortenerTools.Core.Domain
 
         public bool? IsArchived { get; set; }
         public string SchedulesPropertyRaw { get; set; }
+
+        private string? _linkType;
+
+        public string LinkType
+        {
+            get => string.IsNullOrEmpty(_linkType) ? LinkTypes.Web : _linkType;
+            set => _linkType = value;
+        }
+
+        [JsonIgnore]
+        public string? DataPropertyRaw { get; set; }
+
+        [IgnoreDataMember]
+        public Dictionary<string, string> Data
+        {
+            get => string.IsNullOrEmpty(DataPropertyRaw)
+                ? new Dictionary<string, string>()
+                : JsonSerializer.Deserialize<Dictionary<string, string>>(DataPropertyRaw) ?? new Dictionary<string, string>();
+            set
+            {
+                DataPropertyRaw = JsonSerializer.Serialize(value ?? new Dictionary<string, string>());
+            }
+        }
 
         private List<Schedule> _schedules { get; set; }
 

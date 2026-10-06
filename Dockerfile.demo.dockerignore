@@ -1,0 +1,17 @@
+**
+!/src/
+!/src/Api/
+!/src/Api/**
+!/src/FunctionsLight/
+!/src/FunctionsLight/**
+!/src/Core/
+!/src/Core/**
+!/src/ServiceDefaults/
+!/src/ServiceDefaults/**
+**/bin
+**/obj
+**/local.settings.json
+.git
+**/.git
+**/.cache
+**/node_modules

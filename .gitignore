@@ -271,3 +271,8 @@ src/adminTools/adminBlazorWebsite/src/appsettings.Development.json
 
 #Igniore VSCode User Setting
 **/.vscode/settings.json
+
+_ignore/
+
+# Local Android emulator state
+.local-android-e2e/

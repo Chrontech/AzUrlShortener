@@ -75,7 +75,7 @@ public class UrlServices
 			result.UrlList = result.UrlList.Where(p => !(p.IsArchived ?? false)).ToList();
 			foreach (ShortUrlEntity url in result.UrlList)
 			{
-				url.ShortUrl = Utility.GetShortUrl(host, url.RowKey);
+				url.ShortUrl = Utility.GetShortUrl(host, url);
 			}
 		}
 		catch (Exception ex)
@@ -94,19 +94,30 @@ public class UrlServices
 		try
 		{
 
-			// If the Url parameter only contains whitespaces or is empty return with BadRequest.
-			if (string.IsNullOrWhiteSpace(input.Url))
+			var linkType = string.IsNullOrWhiteSpace(input.LinkType) ? LinkTypes.Web : input.LinkType.Trim();
+			if (!string.Equals(linkType, LinkTypes.Web, StringComparison.OrdinalIgnoreCase) &&
+				!string.Equals(linkType, LinkTypes.Mobile, StringComparison.OrdinalIgnoreCase))
+			{
+				throw new ShortenerToolException(HttpStatusCode.BadRequest, "The linkType parameter must be web or mobile.");
+			}
+
+			var isMobile = string.Equals(linkType, LinkTypes.Mobile, StringComparison.OrdinalIgnoreCase);
+			if (isMobile && input.Schedules?.Length > 0)
+			{
+				throw new ShortenerToolException(HttpStatusCode.BadRequest, "Mobile links do not support schedules.");
+			}
+
+			if (!isMobile && string.IsNullOrWhiteSpace(input.Url))
 			{
 				throw new ShortenerToolException(HttpStatusCode.BadRequest, "The url parameter can not be empty.");
 			}
 
-			// Validates if input.url is a valid aboslute url, aka is a complete refrence to the resource, ex: http(s)://google.com
-			if (!Uri.IsWellFormedUriString(input.Url, UriKind.Absolute))
+			if (!isMobile && !Uri.IsWellFormedUriString(input.Url, UriKind.Absolute))
 			{
 				throw new ShortenerToolException(HttpStatusCode.BadRequest, $"{input.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'.");
 			}
 
-			string longUrl = input.Url.Trim();
+			string longUrl = isMobile ? MobileLinkSettings.PortalUrl : input.Url!.Trim();
 			string vanity = string.IsNullOrWhiteSpace(input.Vanity) ? "" : input.Vanity.Trim();
 			string title = string.IsNullOrWhiteSpace(input.Title) ? "" : input.Title.Trim();
 
@@ -114,6 +125,11 @@ public class UrlServices
 
 			if (!string.IsNullOrEmpty(vanity))
 			{
+				if (Utility.IsReservedVanity(vanity))
+				{
+					throw new ShortenerToolException(HttpStatusCode.BadRequest, "This Short URL is reserved.");
+				}
+
 				newRow = new ShortUrlEntity(longUrl, vanity, title, input.Schedules);
 
 				if (await _stgHelper.IfShortUrlEntityExist(newRow))
@@ -127,9 +143,22 @@ public class UrlServices
 				newRow = new ShortUrlEntity(longUrl, generatedVanity, title, input.Schedules);
 			}
 
+			newRow.LinkType = isMobile ? LinkTypes.Mobile : LinkTypes.Web;
+			if (isMobile)
+			{
+				newRow.Data = input.Data ?? new Dictionary<string, string>();
+			}
+
 			await _stgHelper.SaveShortUrlEntity(newRow);
 
-			result = new ShortResponse(host, newRow.Url, newRow.RowKey, newRow.Title);
+			result = new ShortResponse
+			{
+				ShortUrl = Utility.GetShortUrl(host, newRow),
+				LongUrl = newRow.Url,
+				Title = newRow.Title,
+				LinkType = newRow.LinkType,
+				Data = newRow.Data
+			};
 
 			_logger.LogInformation("Short Url created.");
 		}
@@ -142,26 +171,65 @@ public class UrlServices
 		return result;
 	}
 
-	public async Task<ShortUrlEntity> Update(ShortUrlEntity input, string host)
+	public async Task<ShortUrlEntity> Update(UrlUpdateCommand command, string host)
 	{
-		ShortUrlEntity result;
-
 		try
 		{
-			// If the Url parameter only contains whitespaces or is empty return with BadRequest.
-			if (string.IsNullOrWhiteSpace(input.Url))
+			var original = await _stgHelper.GetShortUrlEntity(new ShortUrlEntity
 			{
-				throw new ShortenerToolException(HttpStatusCode.BadRequest, "The url parameter can not be empty.");
+				PartitionKey = command.PartitionKey!,
+				RowKey = command.RowKey!
+			});
+			if (string.Equals(original.LinkType, LinkTypes.Mobile, StringComparison.OrdinalIgnoreCase))
+			{
+				if (command.LinkType.IsPresent &&
+					!string.Equals(string.IsNullOrEmpty(command.LinkType.Value) ? LinkTypes.Web : command.LinkType.Value, LinkTypes.Mobile, StringComparison.OrdinalIgnoreCase))
+				{
+					throw new ShortenerToolException(HttpStatusCode.BadRequest, "Mobile link type cannot be changed.");
+				}
+
+				if (command.Url.IsPresent && !string.Equals(command.Url.Value, original.Url, StringComparison.Ordinal))
+				{
+					throw new ShortenerToolException(HttpStatusCode.BadRequest, "Mobile link fallback cannot be changed.");
+				}
+
+				if ((command.Schedules.IsPresent || command.SchedulesPropertyRaw.IsPresent) && command.GetEffectiveSchedules().Count > 0)
+				{
+					throw new ShortenerToolException(HttpStatusCode.BadRequest, "Mobile links do not support schedules.");
+				}
+
+				if (command.Title.IsPresent)
+				{
+					original.Title = command.Title.Value!;
+				}
+
+				if (command.Data.IsPresent)
+				{
+					original.Data = command.Data.Value;
+				}
+			}
+			else
+			{
+				// If the Url parameter only contains whitespaces or is empty return with BadRequest.
+				if (string.IsNullOrWhiteSpace(command.Url.Value))
+				{
+					throw new ShortenerToolException(HttpStatusCode.BadRequest, "The url parameter can not be empty.");
+				}
+
+				// Validates if input.url is a valid aboslute url, aka is a complete refrence to the resource, ex: http(s)://google.com
+				if (!Uri.IsWellFormedUriString(command.Url.Value, UriKind.Absolute))
+				{
+					throw new ShortenerToolException(HttpStatusCode.BadRequest, $"{command.Url.Value} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'.");
+				}
+
+				original.Url = command.Url.Value!;
+				original.Title = command.Title.Value!;
+				original.SchedulesPropertyRaw = System.Text.Json.JsonSerializer.Serialize(command.GetEffectiveSchedules());
 			}
 
-			// Validates if input.url is a valid aboslute url, aka is a complete refrence to the resource, ex: http(s)://google.com
-			if (!Uri.IsWellFormedUriString(input.Url, UriKind.Absolute))
-			{
-				throw new ShortenerToolException(HttpStatusCode.BadRequest, $"{input.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'.");
-			}
-
-			result = await _stgHelper.UpdateShortUrlEntity(input);
-			result.ShortUrl = Utility.GetShortUrl(host, result.RowKey);
+			var result = await _stgHelper.SaveShortUrlEntity(original);
+			result.ShortUrl = Utility.GetShortUrl(host, result);
+			return result;
 
 		}
 		catch (Exception ex)
@@ -170,7 +238,6 @@ public class UrlServices
 			throw;
 		}
 
-		return result;
 	}
 
 	public async Task<ClickDateList> ClickStatsByDay(UrlClickStatsRequest input, string host)
@@ -225,4 +292,3 @@ public class UrlServices
 		}
 	}
 }
-

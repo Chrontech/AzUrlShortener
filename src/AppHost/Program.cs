@@ -6,7 +6,6 @@ var builder = DistributedApplication.CreateBuilder(args);
 var customDomain = builder.AddParameter("CustomDomain");
 var defaultRedirectUrl = builder.AddParameter("DefaultRedirectUrl");
 var apiKey = builder.AddParameter("APIKey");
-
 var urlStorage = builder.AddAzureStorage("url-data");
 
 if (builder.Environment.IsDevelopment())
