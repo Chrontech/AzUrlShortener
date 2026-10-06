@@ -11,21 +11,6 @@
       "DefaultRedirectUrl": {
         "value": "${AZURE_DEFAULT_REDIRECT_URL}"
       },
-      "ChroniclePortalUrl": {
-        "value": "${AZURE_CHRONICLE_PORTAL_URL}"
-      },
-      "ChronicleUriScheme": {
-        "value": "${AZURE_CHRONICLE_URI_SCHEME}"
-      },
-      "ChronicleIosAppId": {
-        "value": "${AZURE_CHRONICLE_IOS_APP_ID}"
-      },
-      "ChronicleAndroidPackage": {
-        "value": "${AZURE_CHRONICLE_ANDROID_PACKAGE}"
-      },
-      "ChronicleAndroidSigningFingerprints": {
-        "value": "${AZURE_CHRONICLE_ANDROID_SIGNING_FINGERPRINTS}"
-      },
       "environmentName": {
         "value": "${AZURE_ENV_NAME}"
       },

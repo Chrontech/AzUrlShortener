@@ -14,11 +14,6 @@ param principalId string = ''
 
 param CustomDomain string
 param DefaultRedirectUrl string
-param ChroniclePortalUrl string = 'https://portal.gochronicle.com/?site=download-chronicle%2F'
-param ChronicleUriScheme string = 'ChronicleMobile'
-param ChronicleIosAppId string = 'MQZQS24FH9.com.gochronicle.chroniclemobile'
-param ChronicleAndroidPackage string = 'com.gochronicle.chroniclemobileapp'
-param ChronicleAndroidSigningFingerprints string = ''
 
 var tags = {
   'azd-env-name': environmentName
