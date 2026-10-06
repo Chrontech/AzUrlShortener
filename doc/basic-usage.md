@@ -1,6 +1,6 @@
 ## Usage after deploy
 
-### Create short url
+### Create short url for mobile deep link
 
 Request:
 ```
@@ -28,7 +28,7 @@ Response:
 }
 ```
 
-### Get Mobile Data
+### Get Data on Mobile
 
 ```
 curl --fail-with-body -i \
