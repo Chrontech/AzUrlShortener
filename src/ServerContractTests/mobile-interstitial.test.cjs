@@ -13,10 +13,8 @@ const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)].m
 assert.ok(scripts.length > 0, 'interstitial must contain an inline script');
 
 function makePage(launchBehavior = 'ignore') {
-  const listeners = { document: new Map(), window: new Map(), anchors: new Map() };
-  const timers = [];
-  const replacements = [];
-  let visibilityState = 'visible';
+  const listeners = { document: new Map(), window: new Map() };
+  const navigations = [];
   let launchUrl;
   let launchError;
   const anchors = new Map(['open-chronicle', 'download-chronicle'].map((id) => [id, {
@@ -29,53 +27,35 @@ function makePage(launchBehavior = 'ignore') {
     }
   }]));
   const document = {
-    get visibilityState() { return visibilityState; },
     addEventListener(name, callback) { listeners.document.set(name, callback); },
     getElementById(id) { return anchors.get(id) ?? null; }
   };
   const location = {
-    replace(url) { replacements.push(url); },
+    replace(url) { navigations.push(url); },
     set href(url) {
       launchUrl = url;
+      launchAttempts.push(url);
       if (launchBehavior === 'throw') throw new Error('simulated scheme-launch exception');
-      if (launchBehavior === 'cancel') listeners.window.get('beforeunload')?.();
-      if (launchBehavior === 'hidden-visible-during-launch') {
-        visibilityState = 'hidden';
-        listeners.document.get('visibilitychange')?.();
-        visibilityState = 'visible';
-        listeners.document.get('visibilitychange')?.();
-      }
-      if (launchBehavior === 'pagehide-during-launch') listeners.window.get('pagehide')?.();
     }
   };
+  const launchAttempts = [];
   const window = {
     location,
     addEventListener(name, callback) { listeners.window.set(name, callback); },
-    setTimeout(callback, delay) {
-      const timer = { callback, delay, active: true };
-      timers.push(timer);
-      return timer;
-    },
-    clearTimeout(timer) { if (timer) timer.active = false; }
   };
   try {
-    const context = { window, document, setTimeout: window.setTimeout, clearTimeout: window.clearTimeout };
+    const context = { window, document };
     for (const script of scripts) vm.runInNewContext(script, context);
   } catch (error) {
     launchError = error;
   }
   return {
     anchors,
-    timers,
-    replacements,
+    navigations,
+    launchAttempts,
     get launchUrl() { return launchUrl; },
     get launchError() { return launchError; },
-    setVisibility(value) {
-      visibilityState = value;
-      listeners.document.get('visibilitychange')?.();
-    },
-    fireWindowEvent(name) { listeners.window.get(name)?.(); },
-    fireTimers() { for (const timer of timers) if (timer.active) timer.callback(); }
+    listenerNames: { document: [...listeners.document.keys()], window: [...listeners.window.keys()] }
   };
 }
 
@@ -95,86 +75,30 @@ function check(name, callback) {
 }
 
 const silentPage = makePage('ignore');
-silentPage.fireTimers();
-const expectedPortal = silentPage.replacements[0];
-check('silent launch fallback succeeds', () => {
+check('initial automatic launch happens once without any delayed portal navigation', () => {
   assertInitialized(silentPage);
-  assert.equal(silentPage.replacements.length, 1, 'fallback must run after a silently ignored launch');
+  assert.equal(silentPage.launchAttempts.length, 1);
+  assert.equal(silentPage.launchUrl, anchorById('open-chronicle')?.href);
+  assert.equal(silentPage.navigations.length, 0);
+  assert.deepEqual(silentPage.listenerNames, { document: [], window: [] });
 });
 
-check('launch exception falls back', () => {
+check('launch exception is swallowed and does not navigate to the portal', () => {
   const page = makePage('throw');
-  page.fireTimers();
   assertInitialized(page);
-  assert.equal(page.replacements.length, 1);
-  assert.equal(page.replacements[0], expectedPortal);
+  assert.equal(page.navigations.length, 0);
 });
 
-check('canceled beforeunload does not suppress fallback', () => {
-  const page = makePage('cancel');
-  page.fireTimers();
-  assertInitialized(page);
-  assert.equal(page.replacements.length, 1);
-  assert.equal(page.replacements[0], expectedPortal);
-});
-
-check('hidden page suppresses fallback', () => {
-  const page = makePage();
-  page.setVisibility('hidden');
-  page.fireTimers();
-  assertInitialized(page);
-  assert.equal(page.replacements.length, 0);
-});
-
-check('hidden then visible cancels stale fallback', () => {
-  const page = makePage();
-  page.setVisibility('hidden');
-  page.setVisibility('visible');
-  page.fireTimers();
-  assertInitialized(page);
-  assert.equal(page.replacements.length, 0);
-});
-
-check('pagehide suppresses fallback', () => {
-  const page = makePage();
-  page.fireWindowEvent('pagehide');
-  page.fireTimers();
-  assertInitialized(page);
-  assert.equal(page.replacements.length, 0);
-});
-
-check('synchronous hidden then visible during launch suppresses fallback', () => {
-  const page = makePage('hidden-visible-during-launch');
-  page.fireTimers();
-  assertInitialized(page);
-  assert.equal(page.replacements.length, 0);
-});
-
-check('synchronous pagehide during launch suppresses fallback', () => {
-  const page = makePage('pagehide-during-launch');
-  page.fireTimers();
-  assertInitialized(page);
-  assert.equal(page.replacements.length, 0);
-});
-
-check('open anchor resets a 1500 ms fallback without preventing navigation', () => {
+check('no timers or click listeners can re-arm a fallback', () => {
   const page = makePage();
   assertInitialized(page);
-  const originalTimerCount = page.timers.length;
-  page.anchors.get('open-chronicle').click();
-  assert.ok(page.timers.length > originalTimerCount, 'open click should reset the fallback timer');
-  assert.ok(page.timers.slice(0, originalTimerCount).every((timer) => !timer.active));
-  assert.ok(page.timers.some((timer) => timer.active && timer.delay === 1500));
-  assert.equal(page.anchors.get('open-chronicle').defaultPrevented, false);
-});
-
-check('download anchor cancels fallback without preventing navigation', () => {
-  const page = makePage();
-  assertInitialized(page);
-  assert.ok(page.timers.some((timer) => timer.active), 'expected initial fallback timer');
-  page.anchors.get('download-chronicle').click();
-  assert.equal(page.timers.some((timer) => timer.active), false);
-  assert.equal(page.anchors.get('download-chronicle').defaultPrevented, false);
+  assert.equal(page.navigations.length, 0);
+  assert.deepEqual(page.listenerNames, { document: [], window: [] });
+  for (const anchor of page.anchors.values()) {
+    anchor.click();
+    assert.equal(anchor.defaultPrevented, false);
+    assert.equal(page.navigations.length, 0);
+  }
 });
 
 function decodeAttribute(value) {
@@ -209,7 +133,7 @@ check('open anchor is present with its runtime launch URI and label', () => {
 check('download anchor is present with the fallback portal URL and label', () => {
   const anchor = anchorById('download-chronicle');
   assert.ok(anchor, 'missing #download-chronicle anchor');
-  assert.equal(anchor.href, expectedPortal);
+  assert.ok(anchor.href, 'download anchor needs an href');
   assert.equal(anchor.text, 'Download Chronicle');
 });
 

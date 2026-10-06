@@ -51,6 +51,8 @@ The helper preflights prerequisites and host ports **5288** and **17071**, then 
 
 With WSL and Docker Desktop, a WSL-side port check cannot establish whether a Windows port is free. If Docker reports `/forwards/expose ... 500`, check VS Code's **Ports** panel: Remote/WSL forwarding can occupy the same Windows ports Docker needs. Choose **Stop Forwarding** for conflicting entries (5288 or 17071 for this demo), then retry; do not kill VS Code or unrelated services. Functions uses host port 17071 rather than the commonly used 7071. Full WSL/Docker Desktop validation remains outstanding.
 
+After installation, the helper automatically checks that both `ChronicleMobile://` and `chroniclemobile://` resolve to the Chronicle app through Android's `BROWSABLE` intent matching. This confirms package registration only; it does not establish that Chrome accepts or launches either link.
+
 The helper pauses so you can actually inspect each screen:
 
 1. Cold deep-link launch: expect **CHRONICLE Link Resolved**, the created ID, and `SCREEN` / `home`.
@@ -61,3 +63,5 @@ The helper pauses so you can actually inspect each screen:
 Confirm no app/system ANR or unexpected browser launch. Device commands and HTTP checks are not visual evidence. Services remain up for inspection until the final Enter or Ctrl-C. The helper cleans up only its uniquely named Compose project and its own ADB reverse mapping; it never stops the emulator or uninstalls the app. Compose logs and response artifacts remain under ignored `.local-android-e2e/`. If cleanup reports failure, use the exact project-scoped recovery command it prints. A package signature mismatch can be resolved by manually uninstalling `com.gochronicle.chroniclemobileapp` and rerunning, but this deletes that app's local data.
 
 Visual Android acceptance remains outstanding until all expected screens have been observed on a working emulator. This guide does not validate iOS behavior.
+
+At the final browser-test pause, open the printed URL in emulator Chrome and allow JavaScript to try opening the app on page load. There is no timed portal redirect; if Chrome blocks automatic app opening, use **Open Chronicle**. **Download Chronicle** remains available as the portal link. Do not rush to click: browser acceptance still requires emulator retesting. Do not treat the automatic intent-resolution checks as confirmation of Chrome behavior.

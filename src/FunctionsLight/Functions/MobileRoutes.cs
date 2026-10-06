@@ -159,8 +159,6 @@ public class MobileRoutes
         var rawPortalUrl = GetSetting("ChroniclePortalUrl", DefaultPortalUrl);
 
         var launchUriJs = JsonSerializer.Serialize(rawLaunchUri);
-        var portalUrlJs = JsonSerializer.Serialize(rawPortalUrl);
-
         var launchUriHtml = WebUtility.HtmlEncode(rawLaunchUri);
         var portalUrlHtml = WebUtility.HtmlEncode(rawPortalUrl);
 
@@ -278,50 +276,10 @@ public class MobileRoutes
   <script>
     (() => {
       const launchUri = {{launchUriJs}};
-      const portalUrl = {{portalUrlJs}};
-
-      let fallbackTimer = null;
-
-      function clearFallback() {
-        if (fallbackTimer !== null) {
-          clearTimeout(fallbackTimer);
-          fallbackTimer = null;
-        }
-      }
-
-      function armFallback() {
-        clearFallback();
-        fallbackTimer = setTimeout(() => {
-          if (document.visibilityState === 'visible') {
-            window.location.replace(portalUrl);
-          }
-        }, 1500);
-      }
-
-      // Clear the fallback if the tab becomes hidden or the page is unloaded.
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-          clearFallback();
-        }
-      });
-      window.addEventListener('pagehide', clearFallback);
-
-      // Allow manual re-triggering of the deep link to reset the fallback timer.
-      document.getElementById('open-chronicle').addEventListener('click', () => {
-        armFallback();
-      });
-
-      // Cancel fallback if downloading is explicitly requested.
-      document.getElementById('download-chronicle').addEventListener('click', () => {
-        clearFallback();
-      });
-
-      // Set fallback and attempt the initial automatic redirection.
-      armFallback();
       try {
         window.location.href = launchUri;
       } catch (e) {
-        // Ignore early failures to allow fallback timer to run.
+        // Ignore failures; the native links remain available.
       }
     })();
   </script>

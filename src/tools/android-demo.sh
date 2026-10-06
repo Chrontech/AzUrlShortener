@@ -151,12 +151,19 @@ SDK_ARGS=("-p:AndroidSdkDirectory=$ANDROID_HOME" "-p:JavaSdkDirectory=$JAVA_HOME
 APK="$ROOT/src/MobileSample/ChronicleMobile.App/bin/Debug/net9.0-android/android-x64/publish/com.gochronicle.chroniclemobileapp-Signed.apk"
 [[ -f "$APK" ]] || die "Standalone APK not found at $APK."
 adb -s "$SERIAL" install -r "$APK"
+PACKAGE=com.gochronicle.chroniclemobileapp
+for scheme in ChronicleMobile chroniclemobile; do
+  resolution="$(adb -s "$SERIAL" shell cmd package resolve-activity --brief \
+    -a android.intent.action.VIEW -c android.intent.category.BROWSABLE \
+    -d "$scheme://?shortid=$SHORT_ID")" || die "Could not resolve the $scheme deep link on device $SERIAL."
+  [[ "$resolution" == *"$PACKAGE"* ]] || die "The $scheme deep link did not resolve to $PACKAGE on device $SERIAL (got: ${resolution:-no activity})."
+  printf 'Deep-link resolution passed: %s:// resolves to %s.\n' "$scheme" "$PACKAGE"
+done
 # The app uses device localhost:7071; forward it to the host's Functions port 17071.
 REVERSE_ADDED=1
 adb -s "$SERIAL" reverse tcp:7071 tcp:17071
 
 pause_for_observation() { printf '\n%s\n' "$1"; read -r -p 'Inspect the emulator, then press Enter to continue (Ctrl-C to stop): '; }
-PACKAGE=com.gochronicle.chroniclemobileapp
 adb -s "$SERIAL" shell am force-stop "$PACKAGE"
 adb -s "$SERIAL" shell am start -W -a android.intent.action.VIEW -d "ChronicleMobile://?shortid=$SHORT_ID"
 pause_for_observation 'Cold launch: visually check CHRONICLE Link Resolved, the short ID, and SCREEN/home.'
@@ -172,4 +179,10 @@ pause_for_observation 'Missing ID: visually check Short Link Missing (404).'
 adb -s "$SERIAL" shell am start -W -a android.intent.action.VIEW -d 'ChronicleMobile://host?shortid=bad'
 pause_for_observation 'Invalid URI: visually check Invalid Deep Link and confirm no browser opened.'
 printf '\nVisual checks are complete only if you observed the expected screens without ANRs or browser navigation.\n'
+printf '\nBrowser-to-app test:\n'
+printf '  Short ID: %s\n' "$SHORT_ID"
+printf '  Emulator Chrome URL: http://127.0.0.1:7071/m/%s\n' "$SHORT_ID"
+printf 'At this final pause, open the URL in emulator Chrome and allow JavaScript to try opening the app on page load. Expect Link Resolved and SCREEN/home.\n'
+printf 'There is no timed portal redirect, so there is no rush to click. If Chrome blocks automatic opening, use Open Chronicle; Download Chronicle remains available as the portal link.\n'
+printf 'Keep this script paused; Enter or Ctrl-C stops the backend and removes the port mapping.\n\n'
 read -r -p 'Press Enter to stop demo containers and clean up this demo (Ctrl-C also cleans up): '

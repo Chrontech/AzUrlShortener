@@ -15,6 +15,10 @@ namespace ChronicleMobile.App;
     [Intent.ActionView],
     Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
     DataScheme = "ChronicleMobile")]
+[IntentFilter(
+    [Intent.ActionView],
+    Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
+    DataScheme = "chroniclemobile")]
 public sealed class MainActivity : MauiAppCompatActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
