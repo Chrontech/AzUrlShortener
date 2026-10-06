@@ -1,5 +1,6 @@
 using Foundation;
 using UIKit;
+using ChronicleMobile.Core;
 
 namespace ChronicleMobile.App;
 
@@ -15,12 +16,35 @@ public sealed class AppDelegate : MauiUIApplicationDelegate
         {
             ProcessUrl(url);
         }
+        else if (application.UserActivity is { } userActivity)
+        {
+            TryProcessUserActivity(userActivity);
+        }
 
         return launched;
     }
 
     public override bool OpenUrl(UIApplication app, NSUrl url, NSDictionary options)
     {
+        ProcessUrl(url);
+        return true;
+    }
+
+    public override bool ContinueUserActivity(
+        UIApplication application,
+        NSUserActivity userActivity,
+        UIApplicationRestorationHandler completionHandler)
+        => TryProcessUserActivity(userActivity);
+
+    private static bool TryProcessUserActivity(NSUserActivity userActivity)
+    {
+        if (userActivity.ActivityType != NSUserActivityType.BrowsingWeb
+            || userActivity.WebPageUrl is not { } url
+            || !DeepLinkParser.TryParse(url.AbsoluteString, out _))
+        {
+            return false;
+        }
+
         ProcessUrl(url);
         return true;
     }

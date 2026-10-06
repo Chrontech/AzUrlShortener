@@ -2,6 +2,7 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
+using ChronicleMobile.Core;
 
 namespace ChronicleMobile.App;
 
@@ -19,6 +20,13 @@ namespace ChronicleMobile.App;
     [Intent.ActionView],
     Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
     DataScheme = "chroniclemobile")]
+[IntentFilter(
+    [Intent.ActionView],
+    Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
+    AutoVerify = true,
+    DataScheme = "https",
+    DataHost = DeepLinkParser.HttpsHost,
+    DataPathPrefix = DeepLinkParser.MobilePathPrefix)]
 public sealed class MainActivity : MauiAppCompatActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)

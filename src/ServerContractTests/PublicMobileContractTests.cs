@@ -120,6 +120,17 @@ public class PublicMobileContractTests
         Assert.StartsWith("application/json", android.Content.Headers.ContentType?.MediaType);
         var androidDocument = await ContractTestHttp.ReadJson(android);
         var expectedFingerprints = MobileLinkSettings.AndroidSigningFingerprints;
+        foreach (var fingerprint in expectedFingerprints)
+        {
+            var bytes = fingerprint.Split(':');
+            Assert.Equal(32, bytes.Length);
+            Assert.All(bytes, value =>
+            {
+                Assert.Equal(2, value.Length);
+                Assert.All(value, character => Assert.True(Uri.IsHexDigit(character)));
+            });
+        }
+
         if (expectedFingerprints.Length == 0)
         {
             Assert.Empty(androidDocument.EnumerateArray());

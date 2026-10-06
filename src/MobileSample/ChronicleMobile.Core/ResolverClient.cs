@@ -6,7 +6,7 @@ namespace ChronicleMobile.Core;
 public sealed class ResolverClient
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
-    private static readonly Uri ProductionResolverBaseUri = new("https://short.gochronicle.com/");
+    private static readonly Uri ProductionResolverBaseUri = new($"https://{DeepLinkParser.HttpsHost}/");
     private readonly HttpClient httpClient;
     private readonly Uri resolverBaseUri;
 

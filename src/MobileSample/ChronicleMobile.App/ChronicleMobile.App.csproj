@@ -10,6 +10,9 @@
     <ApplicationId>com.gochronicle.chroniclemobileapp</ApplicationId>
     <ApplicationTitle>Chronicle Mobile Sample</ApplicationTitle>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-ios'">
+    <CodesignEntitlements>Platforms/iOS/Entitlements.plist</CodesignEntitlements>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../ChronicleMobile.Core/ChronicleMobile.Core.csproj" />
   </ItemGroup>

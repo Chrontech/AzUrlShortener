@@ -51,7 +51,30 @@ The helper preflights prerequisites and host ports **5288** and **17071**, then 
 
 With WSL and Docker Desktop, a WSL-side port check cannot establish whether a Windows port is free. If Docker reports `/forwards/expose ... 500`, check VS Code's **Ports** panel: Remote/WSL forwarding can occupy the same Windows ports Docker needs. Choose **Stop Forwarding** for conflicting entries (5288 or 17071 for this demo), then retry; do not kill VS Code or unrelated services. Functions uses host port 17071 rather than the commonly used 7071. Full WSL/Docker Desktop validation remains outstanding.
 
-After installation, the helper automatically checks that both `ChronicleMobile://` and `chroniclemobile://` resolve to the Chronicle app through Android's `BROWSABLE` intent matching. This confirms package registration only; it does not establish that Chrome accepts or launches either link.
+After installation, the helper automatically checks that both custom-scheme casing variants resolve to the Chronicle app through Android's `BROWSABLE` intent matching. This confirms package registration only; it does not establish that Chrome accepts or launches those links, or that HTTPS domain verification succeeded.
+
+To check HTTPS activity-filter delivery independently of domain verification, with the emulator booted and app installed, run:
+
+```bash
+adb shell am start -W -a android.intent.action.VIEW -d 'https://short.gochronicle.com/m/YOUR_SHORT_ID'
+```
+
+Repeat with the app stopped for a cold launch and already running for a warm launch. This implicit command checks activity resolution; if Android asks which app to use, choose Chronicle. To force delivery to the app and specifically check its callback/parser/resolver path regardless of domain verification, use:
+
+```bash
+adb shell am start -W -a android.intent.action.VIEW -d 'https://short.gochronicle.com/m/YOUR_SHORT_ID' -p com.gochronicle.chroniclemobileapp
+```
+
+Neither command proves that a browser will hand off the link or that Android verified the domain. On Android 12+, check verification state and request/re-run verification with:
+
+```bash
+adb shell pm get-app-links com.gochronicle.chroniclemobileapp
+adb shell pm verify-app-links --re-verify com.gochronicle.chroniclemobileapp
+```
+
+Successful OS verification additionally requires the public `assetlinks.json` to match the installed package and signing certificate. With the current source settings, check that the returned fingerprint matches this APK's signer; an empty fingerprints setting would return no Android targets.
+
+On iOS, install a build signed with a provisioning profile that authorizes the `applinks:short.gochronicle.com` Associated Domains entitlement. Confirm the public AASA contains the app ID being tested and allows `/m/*`. The configured production app ID differs from the sample bundle ID; testing this sample requires a staging association with its Team ID and bundle ID or integrating it under the production identity—do not replace the confirmed production ID just for the sample. On a physical device, tap `https://short.gochronicle.com/m/YOUR_SHORT_ID` from another app or a suitable test page while Chronicle is stopped (cold launch). Then tap that exact same URL again while Chronicle is running (warm continuation), and confirm both activations reach the link-resolution result. Repeating the same URL verifies that a later warm activation is not suppressed after cold launch. Browser behavior can vary; association configuration alone is not evidence of successful handoff.
 
 The helper pauses so you can actually inspect each screen:
 
