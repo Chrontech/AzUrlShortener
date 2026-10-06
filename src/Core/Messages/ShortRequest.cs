@@ -1,4 +1,5 @@
 using Cloud5mins.ShortenerTools.Core.Domain;
+using System.Text.Json.Serialization;
 
 namespace Cloud5mins.ShortenerTools.Core.Messages
 {
@@ -14,6 +15,7 @@ namespace Cloud5mins.ShortenerTools.Core.Messages
 
         public string? LinkType { get; set; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, string>? Data { get; set; }
     }
 }

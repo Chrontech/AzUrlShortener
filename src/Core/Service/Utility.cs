@@ -48,6 +48,13 @@ public static class Utility
         return host + "/" + vanity;
     }
 
+    public static string GetShortUrl(string host, ShortUrlEntity entity)
+    {
+        return string.Equals(entity.LinkType, LinkTypes.Mobile, StringComparison.OrdinalIgnoreCase)
+            ? string.Concat(host, "/m/", Uri.EscapeDataString(entity.RowKey))
+            : GetShortUrl(host, entity.RowKey);
+    }
+
     public static bool IsReservedVanity(string vanity)
     {
         return ReservedVanities.Contains(vanity, StringComparer.OrdinalIgnoreCase);

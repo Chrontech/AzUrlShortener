@@ -88,14 +88,10 @@ public static class ShortenerEnpoints
     {
         try
         {
-            if (!TryDeserializeRequest(requestBody, out ShortRequest? request, out var error))
-            {
-                return TypedResults.BadRequest(new DetailedBadRequest { Message = error });
-            }
-
+            var request = ShortRequestParser.ParseCreate(requestBody);
             var urlServices = new UrlServices(logger, new AzStrorageTablesService(tblClient));
             var host = GetHost(context);
-            ShortResponse result = await urlServices.Create(request!, host);
+            ShortResponse result = await urlServices.Create(request, host);
             return TypedResults.Created($"/api/UrlCreate/{result.ShortUrl}", result);
         }
         catch (ShortenerToolException ex)
@@ -154,25 +150,10 @@ public static class ShortenerEnpoints
     {
         try
         {
-            if (!IsValidData(requestBody.RootElement, out var error))
-            {
-                return TypedResults.BadRequest(new DetailedBadRequest { Message = error });
-            }
-
-            var shortUrl = requestBody.Deserialize<ShortUrlEntity>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (shortUrl == null)
-            {
-                return TypedResults.BadRequest(new DetailedBadRequest { Message = "The request body is required." });
-            }
-
+            var command = ShortRequestParser.ParseUpdate(requestBody);
             var urlServices = new UrlServices(logger, new AzStrorageTablesService(tblClient));
             var host = GetHost(context);
-            var result = await urlServices.Update(shortUrl, host, new MobileUpdateFields(
-                HasProperty(requestBody.RootElement, "title"),
-                HasProperty(requestBody.RootElement, "data"),
-                HasProperty(requestBody.RootElement, "url"),
-                HasProperty(requestBody.RootElement, "schedules") || HasProperty(requestBody.RootElement, "schedulesPropertyRaw"),
-                HasProperty(requestBody.RootElement, "linkType")));
+            var result = await urlServices.Update(command, host);
             return TypedResults.Ok(result);
         }
         catch (ShortenerToolException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
@@ -189,65 +170,6 @@ public static class ShortenerEnpoints
             return TypedResults.InternalServerError<DetailedBadRequest>(new DetailedBadRequest { Message = ex.Message });
         }
     }
-
-    private static bool HasProperty(JsonElement body, string name)
-    {
-        return body.EnumerateObject().Any(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool TryDeserializeRequest(JsonDocument requestBody, out ShortRequest? request, out string error)
-    {
-        request = null;
-        if (!IsValidData(requestBody.RootElement, out error))
-        {
-            return false;
-        }
-
-        try
-        {
-            request = requestBody.Deserialize<ShortRequest>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (request == null)
-            {
-                error = "The request body is required.";
-                return false;
-            }
-
-            error = string.Empty;
-            return true;
-        }
-        catch (JsonException ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-    }
-
-    private static bool IsValidData(JsonElement body, out string error)
-    {
-        if (body.ValueKind != JsonValueKind.Object)
-        {
-            error = "The request body must be a JSON object.";
-            return false;
-        }
-
-        var data = body.EnumerateObject().FirstOrDefault(property => string.Equals(property.Name, "data", StringComparison.OrdinalIgnoreCase));
-        if (data.Equals(default(JsonProperty)))
-        {
-            error = string.Empty;
-            return true;
-        }
-
-        if (data.Value.ValueKind != JsonValueKind.Object || data.Value.EnumerateObject().Any(property => property.Value.ValueKind != JsonValueKind.String))
-        {
-            error = "The data parameter must be an object with string values.";
-            return false;
-        }
-
-        error = string.Empty;
-        return true;
-    }
-
-
 
     static private async Task<Results<
                                     Ok<ClickDateList>,

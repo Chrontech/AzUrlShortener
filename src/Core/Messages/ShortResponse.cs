@@ -1,5 +1,3 @@
-using Cloud5mins.ShortenerTools.Core.Domain;
-
 namespace Cloud5mins.ShortenerTools.Core.Messages
 {
     public class ShortResponse
@@ -11,14 +9,5 @@ namespace Cloud5mins.ShortenerTools.Core.Messages
         public Dictionary<string, string> Data { get; set; }
 
         public ShortResponse() { }
-        public ShortResponse(string host, string longUrl, string endUrl, string title)
-        {
-            LongUrl = longUrl;
-            ShortUrl = string.Concat(host, "/", endUrl);
-            Title = title;
-            LinkType = LinkTypes.Web;
-            Data = new Dictionary<string, string>();
-
-        }
     }
 }
