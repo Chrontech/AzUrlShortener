@@ -13,11 +13,6 @@ namespace Cloud5mins.ShortenerTools.Functions;
 
 public class MobileRoutes
 {
-    private const string DefaultPortalUrl = "https://portal.gochronicle.com/?site=download-chronicle%2F";
-    private const string DefaultUriScheme = "ChronicleMobile";
-    private const string DefaultIosAppId = "MQZQS24FH9.com.gochronicle.chroniclemobile";
-    private const string DefaultAndroidPackage = "com.gochronicle.chroniclemobileapp";
-
     private readonly ILogger _logger;
     private readonly TableServiceClient _tblClient;
 
@@ -81,7 +76,7 @@ public class MobileRoutes
                 {
                     new
                     {
-                        appID = GetSetting("ChronicleIosAppId", DefaultIosAppId),
+                        appID = MobileLinkSettings.IosAppId,
                         components = new[] { new Dictionary<string, string> { ["/"] = "/m/*" } }
                     }
                 }
@@ -94,11 +89,10 @@ public class MobileRoutes
     public async Task<HttpResponseData> AndroidAssetLinks(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ".well-known/assetlinks.json")] HttpRequestData req)
     {
-        var fingerprints = GetFingerprints();
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
 
-        if (fingerprints.Length == 0)
+        if (MobileLinkSettings.AndroidSigningFingerprints.Length == 0)
         {
             await response.WriteStringAsync("[]");
             return response;
@@ -112,8 +106,8 @@ public class MobileRoutes
                 target = new
                 {
                     @namespace = "android_app",
-                    package_name = GetSetting("ChronicleAndroidPackage", DefaultAndroidPackage),
-                    sha256_cert_fingerprints = fingerprints
+                    package_name = MobileLinkSettings.AndroidPackage,
+                    sha256_cert_fingerprints = MobileLinkSettings.AndroidSigningFingerprints
                 }
             }
         }));
@@ -149,14 +143,14 @@ public class MobileRoutes
     private static HttpResponseData RedirectToPortal(HttpRequestData request)
     {
         var response = request.CreateResponse(HttpStatusCode.Redirect);
-        response.Headers.Add("Location", GetSetting("ChroniclePortalUrl", DefaultPortalUrl));
+        response.Headers.Add("Location", MobileLinkSettings.PortalUrl);
         return response;
     }
 
     private static string CreateInterstitial(string shortId)
     {
-        var rawLaunchUri = $"{GetSetting("ChronicleUriScheme", DefaultUriScheme)}://?shortid={Uri.EscapeDataString(shortId)}";
-        var rawPortalUrl = GetSetting("ChroniclePortalUrl", DefaultPortalUrl);
+        var rawLaunchUri = $"{MobileLinkSettings.UriScheme}://?shortid={Uri.EscapeDataString(shortId)}";
+        var rawPortalUrl = MobileLinkSettings.PortalUrl;
 
         var launchUriJs = JsonSerializer.Serialize(rawLaunchUri);
         var launchUriHtml = WebUtility.HtmlEncode(rawLaunchUri);
@@ -288,14 +282,4 @@ public class MobileRoutes
 """;
     }
 
-    private static string[] GetFingerprints()
-    {
-        return (Environment.GetEnvironmentVariable("ChronicleAndroidSigningFingerprints") ?? string.Empty)
-            .Split([',', ';', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-    }
-
-    private static string GetSetting(string name, string defaultValue)
-    {
-        return Environment.GetEnvironmentVariable(name) ?? defaultValue;
-    }
 }

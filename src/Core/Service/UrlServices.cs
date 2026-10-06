@@ -8,7 +8,6 @@ namespace Cloud5mins.ShortenerTools.Core.Services;
 
 public class UrlServices
 {
-    private const string DefaultMobilePortalUrl = "https://portal.gochronicle.com/?site=download-chronicle%2F";
 	private readonly ILogger _logger;
 	private readonly IAzStrorageTablesService _stgHelper;
 
@@ -120,7 +119,7 @@ public class UrlServices
 				throw new ShortenerToolException(HttpStatusCode.BadRequest, $"{input.Url} is not a valid absolute Url. The Url parameter must start with 'http://' or 'http://'.");
 			}
 
-			string longUrl = isMobile ? GetMobilePortalUrl() : input.Url!.Trim();
+			string longUrl = isMobile ? MobileLinkSettings.PortalUrl : input.Url!.Trim();
 			string vanity = string.IsNullOrWhiteSpace(input.Vanity) ? "" : input.Vanity.Trim();
 			string title = string.IsNullOrWhiteSpace(input.Title) ? "" : input.Title.Trim();
 
@@ -235,11 +234,6 @@ public class UrlServices
 		}
 
 		return result;
-	}
-
-	private static string GetMobilePortalUrl()
-	{
-		return Environment.GetEnvironmentVariable("ChroniclePortalUrl") ?? DefaultMobilePortalUrl;
 	}
 
 	public async Task<ClickDateList> ClickStatsByDay(UrlClickStatsRequest input, string host)

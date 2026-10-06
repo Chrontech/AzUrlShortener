@@ -2,17 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Cloud5mins.ShortenerTools.Core.Domain;
 using Xunit;
 
 namespace Cloud5mins.ShortenerTools.ServerContractTests;
 
 public class PublicMobileContractTests
 {
-    private static string PortalUrl => Environment.GetEnvironmentVariable("SERVER_CONTRACT_PORTAL_URL") ?? "https://portal.gochronicle.com/?site=download-chronicle%2F";
-    private static string UriScheme => Environment.GetEnvironmentVariable("SERVER_CONTRACT_URI_SCHEME") ?? "ChronicleMobile";
-    private static string IosAppId => Environment.GetEnvironmentVariable("SERVER_CONTRACT_IOS_APP_ID") ?? "MQZQS24FH9.com.gochronicle.chroniclemobile";
-    private static string AndroidPackage => Environment.GetEnvironmentVariable("SERVER_CONTRACT_ANDROID_PACKAGE") ?? "com.gochronicle.chroniclemobileapp";
-
     [ServerContractFact]
     public async Task Mobile_routes_resolve_metadata_and_fall_back_without_forwarding_it()
     {
@@ -48,9 +44,9 @@ public class PublicMobileContractTests
         Assert.StartsWith("text/html", mobile.Content.Headers.ContentType?.MediaType);
         var html = await mobile.Content.ReadAsStringAsync();
         Assert.Contains("Opening Chronicle", html);
-        var launchUrl = $"{UriScheme}://?shortid={Uri.EscapeDataString(vanity)}";
+        var launchUrl = $"{MobileLinkSettings.UriScheme}://?shortid={Uri.EscapeDataString(vanity)}";
         var escapedLaunchUrl = WebUtility.HtmlEncode(launchUrl);
-        var escapedPortalUrl = WebUtility.HtmlEncode(PortalUrl);
+        var escapedPortalUrl = WebUtility.HtmlEncode(MobileLinkSettings.PortalUrl);
         Assert.Contains(launchUrl, html);
         Assert.Matches($"<a\\b(?=[^>]*\\bid=\"open-chronicle\")(?=[^>]*\\bhref=\"{Regex.Escape(escapedLaunchUrl)}\")[^>]*>[\\s\\S]*?Open Chronicle[\\s\\S]*?</a>", html);
         Assert.Matches($"<a\\b(?=[^>]*\\bid=\"download-chronicle\")(?=[^>]*\\bhref=\"{Regex.Escape(escapedPortalUrl)}\")[^>]*>[\\s\\S]*?Download Chronicle[\\s\\S]*?</a>", html);
@@ -62,7 +58,7 @@ public class PublicMobileContractTests
 
         var missingMobile = await publicClient.GetAsync($"/m/missing{Guid.NewGuid():N}");
         Assert.Equal(HttpStatusCode.Redirect, missingMobile.StatusCode);
-        Assert.Equal(PortalUrl, missingMobile.Headers.Location?.ToString());
+        Assert.Equal(MobileLinkSettings.PortalUrl, missingMobile.Headers.Location?.ToString());
 
         var archive = await api.PostAsJsonAsync("/api/UrlArchive", new
         {
@@ -77,7 +73,7 @@ public class PublicMobileContractTests
 
         var archivedMobile = await publicClient.GetAsync($"/m/{vanity}");
         Assert.Equal(HttpStatusCode.Redirect, archivedMobile.StatusCode);
-        Assert.Equal(PortalUrl, archivedMobile.Headers.Location?.ToString());
+        Assert.Equal(MobileLinkSettings.PortalUrl, archivedMobile.Headers.Location?.ToString());
 
         var webVanity = "web" + Guid.NewGuid().ToString("N")[..12];
         var web = await api.PostAsJsonAsync("/api/UrlCreate", new
@@ -97,7 +93,7 @@ public class PublicMobileContractTests
 
         var nonMobileRoute = await publicClient.GetAsync($"/m/{webVanity}");
         Assert.Equal(HttpStatusCode.Redirect, nonMobileRoute.StatusCode);
-        Assert.Equal(PortalUrl, nonMobileRoute.Headers.Location?.ToString());
+        Assert.Equal(MobileLinkSettings.PortalUrl, nonMobileRoute.Headers.Location?.ToString());
 
         var emptyVanity = "empty" + Guid.NewGuid().ToString("N")[..12];
         var emptyMobile = await api.PostAsJsonAsync("/api/UrlCreate", new
@@ -129,15 +125,14 @@ public class PublicMobileContractTests
         Assert.StartsWith("application/json", apple.Content.Headers.ContentType?.MediaType);
         var appleDocument = JsonDocument.Parse(await apple.Content.ReadAsStreamAsync()).RootElement;
         var appleDetail = appleDocument.GetProperty("applinks").GetProperty("details")[0];
-        Assert.Equal(IosAppId, appleDetail.GetProperty("appID").GetString());
+        Assert.Equal(MobileLinkSettings.IosAppId, appleDetail.GetProperty("appID").GetString());
         Assert.Equal("/m/*", appleDetail.GetProperty("components")[0].GetProperty("/").GetString());
 
         var android = await client.GetAsync("/.well-known/assetlinks.json");
         Assert.Equal(HttpStatusCode.OK, android.StatusCode);
         Assert.StartsWith("application/json", android.Content.Headers.ContentType?.MediaType);
         var androidDocument = JsonDocument.Parse(await android.Content.ReadAsStreamAsync()).RootElement;
-        var expectedFingerprints = (Environment.GetEnvironmentVariable("SERVER_CONTRACT_ANDROID_SIGNING_FINGERPRINTS") ?? string.Empty)
-            .Split([',', ';', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var expectedFingerprints = MobileLinkSettings.AndroidSigningFingerprints;
         if (expectedFingerprints.Length == 0)
         {
             Assert.Empty(androidDocument.EnumerateArray());
@@ -145,7 +140,7 @@ public class PublicMobileContractTests
         else
         {
             var target = androidDocument[0].GetProperty("target");
-            Assert.Equal(AndroidPackage, target.GetProperty("package_name").GetString());
+            Assert.Equal(MobileLinkSettings.AndroidPackage, target.GetProperty("package_name").GetString());
             Assert.Equal(expectedFingerprints, target.GetProperty("sha256_cert_fingerprints").EnumerateArray().Select(value => value.GetString()));
         }
     }
