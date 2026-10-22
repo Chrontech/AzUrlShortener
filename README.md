@@ -17,6 +17,7 @@ Features:
 
 - Redirect different destination base on schedules.
 - Keep Statistics of your clicks.
+- Create mobile links with server-managed metadata, app-opening browser fallback, and an anonymous resolver.
 - Budget-friendly and 100% open-source.
 - Extensible for more enterprise-friendly configurations
 - Simple step by step deployment. 
@@ -151,15 +152,16 @@ check the how-to-deploy.md doc
 
 The resource group is called: `url-prod` which generated `rg-url-prod` in the portal
 
-To deploy, run `azd up` in the /src directory.
+To deploy, run `azd up` in the `/src` directory.
 
-It will ask you for 3 parameters, and then save these in the .azure folder
+It will request application parameters and save them in the `.azure` environment folder:
 
-CustomDomain - domain where your function app will live (the public redirection app). This originally was discussed as short.gochronicle.com
+- `CustomDomain` - domain where the public redirection app will live, such as `short.gochronicle.com`.
+- `DefaultRedirectUrl` - fallback when an ordinary short URL does not exist.
+- `APIKey` - key required by the protected management API.
+- Mobile-link settings are code-defined in [`src/Core/Domain/MobileLinkSettings.cs`](src/Core/Domain/MobileLinkSettings.cs), not deployment parameters. The Android signing fingerprint is `20:65:EC:AC:40:82:27:29:45:9B:BE:67:43:8F:B4:83:5D:35:3F:83:E5:55:CB:36:8D:A6:48:ED:76:90:39:8C` and must match the certificate that signs the installed Android build. The confirmed production iOS association app ID is `MQZQS24FH9.com.gochronicle.chroniclemobile`; it is separate from the sample's `com.gochronicle.chroniclemobileapp` bundle ID.
 
-DefaultRedirectUrl - if the path of the short url doesn't exist in DB, where do you want to redirect to. Empty string will just show an error page which is likey fine.
-
-APIKey - The hardcoded API key provided. We can regenerate it, and if so you just need to redeploy with updated parameter with the new key.
+The integrated Android/iOS sample under [`src/MobileSample`](src/MobileSample) accepts both the `ChronicleMobile://` custom scheme and associated HTTPS `/m/<shortId>` links through the same metadata-only resolver flow. OS-level HTTPS interception depends on correct domain association documents, signing, and device verification; the sample does not implement deferred deep linking or metadata-driven navigation. See the [deep-link integration guide](doc/deeplink-integration.md) and root [local testing guide](TESTING.md).
  
 ### Troubleshooting Deployment
 

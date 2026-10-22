@@ -25,7 +25,7 @@ After a few seconds, you should now be in your version of the AzUrlShortener pro
 - [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd)
 
 
-## Deploying to Azure
+## First time Deploying to Azure
 
 1. Make sure Docker (or Podman) is currently started. It will be used to package the Apps into containers before being 
 1. In a terminal, navigate to the `src` directory of your project.
@@ -64,6 +64,14 @@ After a few seconds, you should now be in your version of the AzUrlShortener pro
 After the deployment is complete, you will see the URLs of your applications in the terminal; the one starting by `https://admin` is the admin tools (aka TinyBlazorAdmin), and the one starting with `https://azfunc-light` is the redicrect service. There is also many details about the resources created in Azure, and a link to the .NET Aspire dashboard.
 
 ![azd deployment result](../images/deployment-result.png)
+
+## Future deployments
+
+If not changing secrets or anything you can just run:
+
+`azd config set alpha.aca.persistDomains on`
+
+`azd deploy` from `./src`
 
 ## Add authentication to the admin website
 

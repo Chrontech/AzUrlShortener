@@ -92,17 +92,6 @@ public class AzStrorageTablesService(TableServiceClient client) : IAzStrorageTab
         return newShortUrl;
     }
 
-    public async Task<ShortUrlEntity> UpdateShortUrlEntity(ShortUrlEntity urlEntity)
-    {
-        ShortUrlEntity originalUrl = await GetShortUrlEntity(urlEntity);
-        originalUrl.Url = urlEntity.Url;
-        originalUrl.Title = urlEntity.Title;
-        originalUrl.SchedulesPropertyRaw = JsonSerializer.Serialize<List<Schedule>>(urlEntity.Schedules);
-
-        return await SaveShortUrlEntity(originalUrl);
-    }
-
-
     /// <summary>
     /// Returns the ShortUrlEntity of the <paramref name="vanity"/>
     /// </summary>

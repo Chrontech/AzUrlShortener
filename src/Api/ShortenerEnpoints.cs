@@ -5,6 +5,7 @@ using Cloud5mins.ShortenerTools.Core.Service;
 using Cloud5mins.ShortenerTools.Core.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Net;
+using System.Text.Json;
 
 public static class ShortenerEnpoints
 {
@@ -80,13 +81,14 @@ public static class ShortenerEnpoints
                                 NotFound<DetailedBadRequest>,
                                 Conflict<DetailedBadRequest>,
                                 InternalServerError<DetailedBadRequest>
-                                >> UrlCreate(ShortRequest request,
-                                                TableServiceClient tblClient,
+                                >> UrlCreate(JsonDocument requestBody,
+                                                 TableServiceClient tblClient,
                                                 HttpContext context,
                                                 ILogger logger)
     {
         try
         {
+            var request = ShortRequestParser.ParseCreate(requestBody);
             var urlServices = new UrlServices(logger, new AzStrorageTablesService(tblClient));
             var host = GetHost(context);
             ShortResponse result = await urlServices.Create(request, host);
@@ -105,6 +107,10 @@ public static class ShortenerEnpoints
                 default:
                     return TypedResults.InternalServerError<DetailedBadRequest>(new DetailedBadRequest { Message = ex.Message });
             }
+        }
+        catch (JsonException ex)
+        {
+            return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -135,18 +141,28 @@ public static class ShortenerEnpoints
 
     static private async Task<Results<
                                     Ok<ShortUrlEntity>,
+                                    BadRequest<DetailedBadRequest>,
                                     InternalServerError<DetailedBadRequest>>>
-                                    UrlUpdate(ShortUrlEntity shortUrl,
+                                    UrlUpdate(JsonDocument requestBody,
                                                 TableServiceClient tblClient,
                                                 HttpContext context,
                                                 ILogger logger)
     {
         try
         {
+            var command = ShortRequestParser.ParseUpdate(requestBody);
             var urlServices = new UrlServices(logger, new AzStrorageTablesService(tblClient));
             var host = GetHost(context);
-            var result = await urlServices.Update(shortUrl, host);
+            var result = await urlServices.Update(command, host);
             return TypedResults.Ok(result);
+        }
+        catch (ShortenerToolException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
+        }
+        catch (JsonException ex)
+        {
+            return TypedResults.BadRequest(new DetailedBadRequest { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -154,8 +170,6 @@ public static class ShortenerEnpoints
             return TypedResults.InternalServerError<DetailedBadRequest>(new DetailedBadRequest { Message = ex.Message });
         }
     }
-
-
 
     static private async Task<Results<
                                     Ok<ClickDateList>,
@@ -250,4 +264,3 @@ public static class ShortenerEnpoints
 	}
 
 }
-
